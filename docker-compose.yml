@@ -1,0 +1,28 @@
+version: "3.9"
+services:
+  client:
+    image: xd:latest
+    container_name: client
+    working_dir: /home/root/client
+    volumes:
+      - ./src:/home/root/client
+    networks:
+      pg13schoolproject:
+        ipv4_address: 172.16.238.5
+
+  server:
+    image: xd:latest
+    container_name: server
+    working_dir: /home/root/server
+    volumes:
+      - ./src:/home/root/server
+    networks:
+      pg13schoolproject:
+        ipv4_address: 172.16.238.6
+
+networks:
+  pg13schoolproject:
+    ipam:
+      driver: default
+      config:
+        - subnet: "172.16.238.0/24"
