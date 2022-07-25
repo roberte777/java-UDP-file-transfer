@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 class UDPServer {
     static final private int PORT = 9876;
@@ -32,7 +33,7 @@ class UDPServer {
             String fileName,
             DatagramSocket serverSocket,
             DatagramPacket receivePacket
-            ) throws IOException {
+            ) throws IOException, InterruptedException {
         //open file from res folder
         File file = new File("res/" + fileName);
         //throw error if file doesn't exist
@@ -46,6 +47,7 @@ class UDPServer {
         int sendingBytes = transferredBytes + PACKETLENGTH;
         //final byte container for data
         byte[] packetBytes = new byte[PACKETLENGTH];
+        int packetCount = 0;
 
         //create file input stream
         FileInputStream fileInputStream = new FileInputStream(file);
@@ -89,6 +91,9 @@ class UDPServer {
 
                 packetBytes = new byte[PACKETLENGTH];
                 transferredBytes += (PACKETLENGTH - responseHeader.length() - 24);
+                packetCount += 1;
+                //this delay is to prevent problems. The buffer was being overwritten.
+                TimeUnit.MILLISECONDS.sleep(100);
             }
         fileInputStream.close();
         //create final packet with a "0" to indicate the end of the file
@@ -97,14 +102,10 @@ class UDPServer {
         DatagramPacket finalPacketSend = new DatagramPacket(finalPacket, finalPacket.length, receivePacket.getAddress(), receivePacket.getPort());
         //send final packet
         serverSocket.send(finalPacketSend);
-        System.out.println("Finished sending file!");
+        System.out.println("Finished sending file! Should have sent: " + file.length());
 
     }
-
-
-
-
-
+    
 
     public static void main(String args[]) throws Exception {
 
