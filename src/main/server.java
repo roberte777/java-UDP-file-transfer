@@ -34,7 +34,7 @@ class UDPServer {
             DatagramPacket receivePacket
             ) throws IOException {
         //open file from res folder
-        File file = new File("src/res/" + fileName);
+        File file = new File("res/" + fileName);
         //throw error if file doesn't exist
         if (!file.exists()) {
             throw new FileNotFoundException();
@@ -58,7 +58,7 @@ class UDPServer {
                         "Content-Range: bytes" + transferredBytes + "-" + sendingBytes + "/" + file.length() + "\\r\\n";
 
                 // Read data from file into packet
-                sendingBytes = transferredBytes + (PACKETLENGTH - (responseHeader.length() + 24));
+                sendingBytes = transferredBytes + (PACKETLENGTH - responseHeader.length() - 24);
                 fileInputStream.read(packetBytes, responseHeader.length() + 24, PACKETLENGTH - (responseHeader.length()+24));
 
                 //cheksum of header
@@ -88,7 +88,7 @@ class UDPServer {
                 System.out.println("Sending bytes from: " + transferredBytes + " to " + sendingBytes);
 
                 packetBytes = new byte[PACKETLENGTH];
-                transferredBytes += PACKETLENGTH - responseHeader.length() + 24;
+                transferredBytes += (PACKETLENGTH - responseHeader.length() - 24);
             }
         fileInputStream.close();
         //create final packet with a "0" to indicate the end of the file
@@ -97,6 +97,7 @@ class UDPServer {
         DatagramPacket finalPacketSend = new DatagramPacket(finalPacket, finalPacket.length, receivePacket.getAddress(), receivePacket.getPort());
         //send final packet
         serverSocket.send(finalPacketSend);
+        System.out.println("Finished sending file!");
 
     }
 

@@ -66,7 +66,9 @@ class UDPClient {
         PROB = Double.parseDouble(args[0]);
         DatagramSocket clientSocket = new DatagramSocket();
 
-        InetAddress IPAddress = InetAddress.getByName("172.16.238.6");
+//        InetAddress IPAddress = InetAddress.getByName("172.16.238.6");
+        InetAddress IPAddress = InetAddress.getByName("localhost");
+
 
         byte[] sendData = new byte[1024];
         byte[] receiveData = new byte[1024];
@@ -82,7 +84,7 @@ class UDPClient {
             new DatagramPacket(receiveData, receiveData.length);
 
         //create a file output stream
-        FileOutputStream fileOutputStream = new FileOutputStream("src/final/test.html");
+        FileOutputStream fileOutputStream = new FileOutputStream("final/test.html");
 
         //recieve all packets from socket
         parseFile:
@@ -104,9 +106,9 @@ class UDPClient {
                 fileOutputStream.write(fileByte);
             }
             //check if the packet is the final packet
-//            if (packet[0] == 0) {
-//                break;
-//            }
+            if (packet[0] == 0) {
+                break;
+            }
             fileOutputStream.flush();
 
         }
@@ -114,5 +116,6 @@ class UDPClient {
         fileOutputStream.close();
 
         clientSocket.close();
+        System.out.println("Closing connection!");
     }
 }
