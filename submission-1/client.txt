@@ -1,0 +1,153 @@
+Request sent to server: GET test.html HTTP/1.0
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 876 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 875 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 873 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 873 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 873 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 873 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 873 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 872 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 873 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 871 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 873 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 873 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 871 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 871 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 871 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 871 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 869 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 869 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 871 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 871 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 869 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 869 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 871 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 869 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 871 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 871 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 871 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 871 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 871 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 871 bytes to file.
+0.5
+Not gremlined packet
+Parsing packet
+Valid file!
+Writing 871 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 871 bytes to file.
+0.5
+Parsing packet
+Checksum mismatch detected!
+Writing 871 bytes to file.
+
+Process finished with exit code 0
+
