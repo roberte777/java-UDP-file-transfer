@@ -61,6 +61,7 @@ class UDPServer {
 
                 // Read data from file into packet
                 sendingBytes = transferredBytes + (PACKETLENGTH - responseHeader.length() - 24);
+
                 fileInputStream.read(packetBytes, responseHeader.length() + 24, PACKETLENGTH - (responseHeader.length()+24));
 
                 //cheksum of header

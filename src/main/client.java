@@ -109,8 +109,8 @@ class UDPClient {
             if (packet[0] == 0) {
                 break;
             }
+            //java thing the docs recommended me to do.
             fileOutputStream.flush();
-
         }
 
         fileOutputStream.close();
