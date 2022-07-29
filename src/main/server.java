@@ -56,8 +56,10 @@ class UDPServer {
                 // Build base header
                 String responseHeader = "HTTP/1.0 200 Document Follows\\r\\n" +
                         "Content-Type: text/plain\\r\\n" +
-                        "Content-Length: "+ fileLength + "\\r\\n" +
-                        "Content-Range: bytes" + transferredBytes + "-" + sendingBytes + "/" + file.length() + "\\r\\n";
+                        "Content-Length: "+ String.format("%06d", fileLength) + "\\r\\n" +
+                        "Content-Range: bytes" + String.format("%06d", transferredBytes) + "-" +
+                        String.format("%06d", sendingBytes) + "/" + file.length() + "\\r\\n" +
+                        "Sequence-Number: " + String.format("%06d", transferredBytes / 842 ) + "\\r\\n";
 
                 // Read data from file into packet
                 sendingBytes = transferredBytes + (PACKETLENGTH - responseHeader.length() - 24);
@@ -107,6 +109,10 @@ class UDPServer {
 
     }
 
+    public static void selectiveRepeat(String fileName, DatagramSocket serverSocket, DatagramPacket receivePacket) throws IOException, InterruptedException {
+        sendFile(fileName, serverSocket, receivePacket);
+    }
+
 
     public static void main(String args[]) throws Exception {
 
@@ -125,7 +131,7 @@ class UDPServer {
             String fileName = parseMessage(request);
             System.out.println("File name: " + fileName);
 
-            sendFile(fileName, serverSocket, receivePacket);
+            selectiveRepeat(fileName, serverSocket, receivePacket);
 
         }
     }

@@ -1,33 +1,10 @@
 import java.io.*;
 import java.net.*;
+import java.sql.Array;
+import java.util.ArrayList;
 
 class UDPClient {
     static public double PROB;
-    public static byte[] parseHeader(byte[] packet) throws NumberFormatException {
-        System.out.println("Parsing packet");
-        String stringPacket = new String(packet);
-        String[] packetArray = stringPacket.split("\\\\r\\\\n\\\\r\\\\n");
-        String checksum = packetArray[0].substring(packetArray[0].length() - 6);
-        String header = packetArray[0].substring(0, packetArray[0].length() - 16);
-
-        int headerChecksum = UDPServer.checksum(header.getBytes());
-        String fileData = packetArray[1];
-        int dataChecksum = UDPServer.checksum(fileData.getBytes());
-        int finalChecksum = headerChecksum + dataChecksum;
-        try {
-            int parsedChecksum = Integer.parseInt(checksum);
-            if (finalChecksum != parsedChecksum) {
-                System.out.println("Checksum mismatch detected!");
-            } else {
-                System.out.println("Valid file!");
-            }
-        } catch (NumberFormatException e) {
-            System.out.println("Corrupted checksum detected.");
-        }
-        System.out.println("Writing " + fileData.length() + " bytes to file.");
-        return fileData.getBytes();
-
-    }
     public static byte[] corruption(byte[] correctPacket, int packetsToCorrupt) {
 
         //alter pakcetsToCorrupt number of random bytes in the packet
@@ -86,19 +63,52 @@ class UDPClient {
         //create a file output stream
         FileOutputStream fileOutputStream = new FileOutputStream("final/test.html");
 
+        //get first packet
+        clientSocket.receive(receivePacket);
+        //create a byte array from the packet
+        Packet firstPacket = new Packet(
+                    gremlin(receivePacket.getData()
+                )
+        );
+
+        System.out.println(firstPacket);
+        Packet[] packetStorage = new Packet[firstPacket.totalPackets()];
+        packetStorage[firstPacket.sequenceNumber] = firstPacket;
+        if (firstPacket.validPacket) {
+            byte[] ack = ("ACK "+ firstPacket.sequenceNumber).getBytes();
+            DatagramPacket dataAck = new DatagramPacket(ack, 0, ack.length);
+            clientSocket.send(dataAck);
+
+        } else {
+            byte[] nack = ("NACK " + firstPacket.sequenceNumber).getBytes();
+            DatagramPacket dataNack = new DatagramPacket(nack, 0, nack.length);
+            clientSocket.send(dataNack);
+        }
+
+
         //recieve all packets from socket
         parseFile:
         while (true) {
             clientSocket.receive(receivePacket);
-            //create a byte array from the packet
-            byte[] packet = receivePacket.getData();
-//            System.out.println("Receiving from server: " + new String(packet));
+            //create a Packet from the received data
+            Packet packet = new Packet(
+                    gremlin(receivePacket.getData()
+                    )
+            );
+            if (packet.validPacket) {
+                byte[] ack = ("ACK "+ packet.sequenceNumber).getBytes();
+                DatagramPacket dataAck = new DatagramPacket(ack, 0, ack.length);
+                clientSocket.send(dataAck);
 
-            packet = gremlin(packet);
+            } else {
+                byte[] nack = ("NACK " + packet.sequenceNumber).getBytes();
+                DatagramPacket dataNack = new DatagramPacket(nack, 0, nack.length);
+                clientSocket.send(dataNack);
+            }
 
             //parse header
             //separate header and file content
-            byte[] fileData = parseHeader(packet);
+            byte[] fileData = packet.fileData;
             //write file
             for (byte fileByte : fileData) {
                 if (fileByte == 0) break parseFile;
@@ -106,7 +116,7 @@ class UDPClient {
                 fileOutputStream.write(fileByte);
             }
             //check if the packet is the final packet
-            if (packet[0] == 0) {
+            if (packet.fileData[0] == 0) {
                 break;
             }
             //java thing the docs recommended me to do.
