@@ -1,6 +1,6 @@
 import java.io.*;
 import java.net.*;
-import java.util.Arrays;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 class UDPServer {
@@ -32,7 +32,8 @@ class UDPServer {
     public static void sendFile(
             String fileName,
             DatagramSocket serverSocket,
-            DatagramPacket receivePacket
+            DatagramPacket receivePacket,
+            Queue<Integer> resendQueue
             ) throws IOException, InterruptedException {
         //open file from res folder
         File file = new File("res/" + fileName);
@@ -47,11 +48,13 @@ class UDPServer {
         int sendingBytes = transferredBytes + PACKETLENGTH;
         //final byte container for data
         byte[] packetBytes = new byte[PACKETLENGTH];
-        int packetCount = 0;
+        //Array to keep hold of the pakcets we have sent
+        List<byte[]> sentPackets = new ArrayList<byte[]>();
 
         //create file input stream
         FileInputStream fileInputStream = new FileInputStream(file);
 
+            //send the file
             while(transferredBytes <= fileLength){
                 // Build base header
                 String responseHeader = "HTTP/1.0 200 Document Follows\\r\\n" +
@@ -86,38 +89,73 @@ class UDPServer {
 
                 DatagramPacket sendPacket =
                         new DatagramPacket(packetBytes, packetBytes.length, receivePacket.getAddress(), receivePacket.getPort());
-
+                //send packet to the client
                 serverSocket.send(sendPacket);
-
-//                System.out.println("Sending this to client: " + new String(packetBytes));
+                //store the sent packet in the array in case of a nack
+                sentPackets.add(packetBytes);
+                //System.out.println("Sending this to client: " + new String(packetBytes));
                 System.out.println("Sending bytes from: " + transferredBytes + " to " + sendingBytes);
 
                 packetBytes = new byte[PACKETLENGTH];
-                transferredBytes += (PACKETLENGTH - responseHeader.length() - 24);
-                packetCount += 1;
+                transferredBytes += (PACKETLENGTH - responseHeader.length());
                 //this delay is to prevent problems. The buffer was being overwritten.
                 TimeUnit.MILLISECONDS.sleep(100);
             }
+
+            //resend any messed up packets
+            while(true){
+                Integer sequenceNumber = resendQueue.poll();
+                //client will send back a -1 when it has received all pakcets successfully
+                if(sequenceNumber == null){
+
+                }
+                else if (sequenceNumber == -1) {
+                    break;
+                } else {
+                    System.out.println("Resending packet " + sequenceNumber);
+                    byte[] dataToResend = sentPackets.get(sequenceNumber);
+
+                    DatagramPacket sendPacket =
+                            new DatagramPacket(dataToResend, dataToResend.length, receivePacket.getAddress(), receivePacket.getPort());
+
+                    //send packet to the client
+                    serverSocket.send(sendPacket);
+                }
+            }
+
         fileInputStream.close();
-        //create final packet with a "0" to indicate the end of the file
-        byte[] finalPacket = new byte[1];
-        finalPacket[0] = 0;
-        DatagramPacket finalPacketSend = new DatagramPacket(finalPacket, finalPacket.length, receivePacket.getAddress(), receivePacket.getPort());
-        //send final packet
-        serverSocket.send(finalPacketSend);
+
         System.out.println("Finished sending file! Should have sent: " + file.length());
 
     }
 
-    public static void selectiveRepeat(String fileName, DatagramSocket serverSocket, DatagramPacket receivePacket) throws IOException, InterruptedException {
-        sendFile(fileName, serverSocket, receivePacket);
+    public static void handleAcks(DatagramSocket serverSocket, Queue<Integer> queue) throws InterruptedException, IOException {
+        while(true){
+            byte[] receiveData = new byte[1024];
+            DatagramPacket receivePacket =
+                    new DatagramPacket(receiveData, receiveData.length);
+            serverSocket.receive(receivePacket);
+            String response = new String(receivePacket.getData());
+            String packetStatus = response.split(" ")[0];
+//            System.out.println(response);
+            int sequenceNumber = Integer.parseInt(response.split(" ")[1].replace("\0",""));
+        System.out.println("sequence number: " + sequenceNumber);
+            if (sequenceNumber < 0) {
+                break;
+            }
+            if (packetStatus.equals("NACK")) {
+                queue.add(sequenceNumber);
+            }
+        }
     }
 
+    public static void selectiveRepeat(String fileName, DatagramSocket serverSocket, DatagramPacket receivePacket, Queue<Integer> resendQueue) throws IOException, InterruptedException {
+        sendFile(fileName, serverSocket, receivePacket, resendQueue);
+    }
 
     public static void main(String args[]) throws Exception {
-
+        Queue<Integer> resendQueue = new LinkedList<>();
         DatagramSocket serverSocket = new DatagramSocket(PORT);
-
         byte[] receiveData = new byte[1024];
 
         while(true) {
@@ -131,7 +169,18 @@ class UDPServer {
             String fileName = parseMessage(request);
             System.out.println("File name: " + fileName);
 
-            selectiveRepeat(fileName, serverSocket, receivePacket);
+            Thread receiveThread = new Thread(()-> {
+                try {
+                    handleAcks(serverSocket, resendQueue);
+                } catch (InterruptedException | IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            receiveThread.start();
+
+            selectiveRepeat(fileName, serverSocket, receivePacket, resendQueue);
+
+            receiveThread.join();
 
         }
     }

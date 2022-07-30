@@ -2,45 +2,14 @@ import java.io.*;
 import java.net.*;
 import java.sql.Array;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 class UDPClient {
     static public double PROB;
-    public static byte[] corruption(byte[] correctPacket, int packetsToCorrupt) {
-
-        //alter pakcetsToCorrupt number of random bytes in the packet
-        for (int i = 0; i < packetsToCorrupt; i++) {
-            int randomIndex = (int) (Math.random() * correctPacket.length);
-            correctPacket[randomIndex] = (byte) (Math.random() * 127);
-        }
-        return correctPacket;
-    }
-    public static byte[] gremlin(byte[] correctPacket) {
-        //random number generator from 0 to 1
-        double randomNumber = Math.random();
-        System.out.println(PROB);
-        if (randomNumber < PROB) {
-            double randomNumber2 = Math.random();
-            //50 percent change to corrupt 1
-            if (randomNumber2 < 0.5) {
-                return corruption(correctPacket, 1);
-            }
-            // 30 percent chance to corrupt 2
-            if (randomNumber2 < 0.8){
-                return corruption(correctPacket, 2);
-
-            }
-            // 20 percent chance to corrupt 3
-            else {
-                return corruption(correctPacket, 3);
-            }
-        } else {
-            System.out.println("Not gremlined packet");
-            return correctPacket;
-        }
-    }
     public static void main(String args[]) throws Exception
     {
         PROB = Double.parseDouble(args[0]);
+        final int PORT = 9876;
         DatagramSocket clientSocket = new DatagramSocket();
 
 //        InetAddress IPAddress = InetAddress.getByName("172.16.238.6");
@@ -49,10 +18,11 @@ class UDPClient {
 
         byte[] sendData = new byte[1024];
         byte[] receiveData = new byte[1024];
+        int receivedCorrectly = 0;
         String request = "GET test.html HTTP/1.0";
         sendData = request.getBytes();
         DatagramPacket sendPacket =
-            new DatagramPacket(sendData, sendData.length, IPAddress, 9876);
+            new DatagramPacket(sendData, sendData.length, IPAddress, PORT);
 
         clientSocket.send(sendPacket);
         System.out.println("Request sent to server: " + request);
@@ -60,72 +30,81 @@ class UDPClient {
         DatagramPacket receivePacket =
             new DatagramPacket(receiveData, receiveData.length);
 
-        //create a file output stream
-        FileOutputStream fileOutputStream = new FileOutputStream("final/test.html");
-
         //get first packet
         clientSocket.receive(receivePacket);
         //create a byte array from the packet
+
         Packet firstPacket = new Packet(
-                    gremlin(receivePacket.getData()
-                )
+                receivePacket.getData()
         );
+        firstPacket.gremlin(PROB);
 
         System.out.println(firstPacket);
-        Packet[] packetStorage = new Packet[firstPacket.totalPackets()];
-        packetStorage[firstPacket.sequenceNumber] = firstPacket;
+        Packet[] packetStorage = new Packet[firstPacket.totalPackets() + 1];
         if (firstPacket.validPacket) {
             byte[] ack = ("ACK "+ firstPacket.sequenceNumber).getBytes();
-            DatagramPacket dataAck = new DatagramPacket(ack, 0, ack.length);
+            DatagramPacket dataAck = new DatagramPacket(ack, ack.length, IPAddress, PORT);
             clientSocket.send(dataAck);
+            packetStorage[firstPacket.sequenceNumber] = firstPacket;
+            receivedCorrectly++;
+
 
         } else {
             byte[] nack = ("NACK " + firstPacket.sequenceNumber).getBytes();
-            DatagramPacket dataNack = new DatagramPacket(nack, 0, nack.length);
+            DatagramPacket dataNack = new DatagramPacket(nack,nack.length, IPAddress, PORT);
             clientSocket.send(dataNack);
         }
-
+        System.out.println("First Packet Sequence Number: "+ firstPacket.sequenceNumber);
 
         //recieve all packets from socket
-        parseFile:
         while (true) {
             clientSocket.receive(receivePacket);
             //create a Packet from the received data
             Packet packet = new Packet(
-                    gremlin(receivePacket.getData()
-                    )
+                    receivePacket.getData()
             );
+            packet.gremlin(PROB);
+            System.out.println("Packet Sequence Number: " + packet.sequenceNumber);
             if (packet.validPacket) {
                 byte[] ack = ("ACK "+ packet.sequenceNumber).getBytes();
-                DatagramPacket dataAck = new DatagramPacket(ack, 0, ack.length);
+                DatagramPacket dataAck = new DatagramPacket(ack, ack.length, IPAddress, PORT);
                 clientSocket.send(dataAck);
+                packetStorage[packet.sequenceNumber] = packet;
+                receivedCorrectly++;
+                System.out.println("Sending ACK as " + new String(dataAck.getData()));
+
 
             } else {
                 byte[] nack = ("NACK " + packet.sequenceNumber).getBytes();
-                DatagramPacket dataNack = new DatagramPacket(nack, 0, nack.length);
+                DatagramPacket dataNack = new DatagramPacket(nack,nack.length, IPAddress, PORT);
                 clientSocket.send(dataNack);
+                System.out.println("Sending ACK as " + new String(dataNack.getData()));
+
             }
 
-            //parse header
-            //separate header and file content
-            byte[] fileData = packet.fileData;
-            //write file
-            for (byte fileByte : fileData) {
-                if (fileByte == 0) break parseFile;
-                //write the byte array to the file output stream as string
-                fileOutputStream.write(fileByte);
-            }
-            //check if the packet is the final packet
-            if (packet.fileData[0] == 0) {
+            if (receivedCorrectly == packet.totalPackets() + 1){
+                byte[] finalPacketArray = ("ACK -1").getBytes();
+                DatagramPacket finalAck = new DatagramPacket(finalPacketArray, finalPacketArray.length, IPAddress, PORT);
+                clientSocket.send(finalAck);
+                clientSocket.close();
                 break;
             }
-            //java thing the docs recommended me to do.
-            fileOutputStream.flush();
+
+        }
+        //create a file output stream
+        FileOutputStream fileOutputStream = new FileOutputStream("final/test.html");
+        parseFile:
+        for (Packet packet : packetStorage){
+            for (byte fileByte : packet.fileData){
+
+                if (fileByte == 0) break parseFile;
+
+                fileOutputStream.write(fileByte);
+            }
+
         }
 
         fileOutputStream.close();
-
-        clientSocket.close();
         System.out.println("Closing connection!");
     }
 }
