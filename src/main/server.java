@@ -5,9 +5,7 @@ import java.util.concurrent.TimeUnit;
 
 class UDPServer {
     static final private int PORT = 9876;
-    private String ADDRESS;
     static private final int PACKETLENGTH=1024;
-    private static final int MAX_CHECKSUM = 127 * 1024;
 
     //function to parse message for http request
     public static String parseMessage(String message) {
