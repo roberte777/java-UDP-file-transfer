@@ -99,7 +99,7 @@ class UDPServer {
                 packetBytes = new byte[PACKETLENGTH];
                 transferredBytes += (PACKETLENGTH - responseHeader.length());
                 //this delay is to prevent problems. The buffer was being overwritten.
-                TimeUnit.MILLISECONDS.sleep(100);
+                TimeUnit.MILLISECONDS.sleep(50);
             }
 
             //resend any messed up packets
@@ -120,6 +120,7 @@ class UDPServer {
 
                     //send packet to the client
                     serverSocket.send(sendPacket);
+                    TimeUnit.MILLISECONDS.sleep(50);
                 }
             }
 

@@ -40,7 +40,7 @@ class UDPClient {
         firstPacket.gremlin(PROB);
 
         System.out.println(firstPacket);
-        Packet[] packetStorage = new Packet[firstPacket.totalPackets() + 1];
+        Packet[] packetStorage = new Packet[firstPacket.totalPackets()];
         if (firstPacket.validPacket) {
             byte[] ack = ("ACK "+ firstPacket.sequenceNumber).getBytes();
             DatagramPacket dataAck = new DatagramPacket(ack, ack.length, IPAddress, PORT);
@@ -71,18 +71,18 @@ class UDPClient {
                 clientSocket.send(dataAck);
                 packetStorage[packet.sequenceNumber] = packet;
                 receivedCorrectly++;
-                System.out.println("Sending ACK as " + new String(dataAck.getData()));
+                System.out.println("Sending ACK for packet " + packet.sequenceNumber);
 
 
             } else {
                 byte[] nack = ("NACK " + packet.sequenceNumber).getBytes();
                 DatagramPacket dataNack = new DatagramPacket(nack,nack.length, IPAddress, PORT);
                 clientSocket.send(dataNack);
-                System.out.println("Sending ACK as " + new String(dataNack.getData()));
+                System.out.println("Sending NACK for " + packet.sequenceNumber);
 
             }
 
-            if (receivedCorrectly == packet.totalPackets() + 1){
+            if (receivedCorrectly == packet.totalPackets() ) {
                 byte[] finalPacketArray = ("ACK -1").getBytes();
                 DatagramPacket finalAck = new DatagramPacket(finalPacketArray, finalPacketArray.length, IPAddress, PORT);
                 clientSocket.send(finalAck);

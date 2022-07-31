@@ -28,7 +28,7 @@ public class Packet {
     }
 
     public int totalPackets(){
-        return this.totalFileLength / this.fileData.length;
+        return (int) Math.ceil((double) this.totalFileLength / this.fileData.length);
     }
     private void checksum() {
         int headerChecksum = UDPServer.checksum(this.header.getBytes());
