@@ -1,5 +1,5 @@
 import java.net.DatagramPacket;
-
+//cole spencer and ethan wilkes
 /**
  * Class to help me do shit to the packets, like extract sequence number
  */

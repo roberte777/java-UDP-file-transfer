@@ -1,3 +1,4 @@
+//cole spencer and ethan wilkes
 import java.io.*;
 import java.net.*;
 import java.sql.Array;
@@ -17,7 +18,7 @@ class UDPClient {
        InetAddress IPAddress = InetAddress.getByName("172.16.238.6");
        //test on localhost before running with docker on above IP for final
        //output
-        // InetAddress IPAddress = InetAddress.getByName("localhost");
+//         InetAddress IPAddress = InetAddress.getByName("localhost");
 
 
         byte[] sendData = new byte[1024];
