@@ -6,9 +6,11 @@ import java.util.concurrent.TimeUnit;
 
 class UDPClient {
     static public double PROB;
+    static public double LOSS_PROB;
     public static void main(String args[]) throws Exception
     {
         PROB = Double.parseDouble(args[0]);
+        LOSS_PROB = Double.parseDouble(args[1]);
         final int PORT = 9876;
         DatagramSocket clientSocket = new DatagramSocket();
 
@@ -37,11 +39,13 @@ class UDPClient {
         Packet firstPacket = new Packet(
                 receivePacket.getData()
         );
-        firstPacket.gremlin(PROB);
+        firstPacket.gremlin(PROB, LOSS_PROB);
 
         System.out.println(firstPacket);
         Packet[] packetStorage = new Packet[firstPacket.totalPackets()];
-        if (firstPacket.validPacket) {
+        if (firstPacket.packetLost) {
+        }
+        else if (firstPacket.validPacket) {
             byte[] ack = ("ACK "+ firstPacket.sequenceNumber).getBytes();
             DatagramPacket dataAck = new DatagramPacket(ack, ack.length, IPAddress, PORT);
             clientSocket.send(dataAck);
@@ -63,9 +67,12 @@ class UDPClient {
             Packet packet = new Packet(
                     receivePacket.getData()
             );
-            packet.gremlin(PROB);
+            packet.gremlin(PROB, LOSS_PROB);
             System.out.println("Packet Sequence Number: " + packet.sequenceNumber);
-            if (packet.validPacket) {
+            if (packet.packetLost || packetStorage[packet.sequenceNumber] != null) {
+
+            }
+            else if (packet.validPacket) {
                 byte[] ack = ("ACK "+ packet.sequenceNumber).getBytes();
                 DatagramPacket dataAck = new DatagramPacket(ack, ack.length, IPAddress, PORT);
                 clientSocket.send(dataAck);

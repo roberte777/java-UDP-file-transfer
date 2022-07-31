@@ -33,7 +33,8 @@ class UDPServer {
             String fileName,
             DatagramSocket serverSocket,
             DatagramPacket receivePacket,
-            Queue<Integer> resendQueue
+            Queue<Integer> resendQueue,
+            List<byte[]> sentNotVerifiedPackets
             ) throws IOException, InterruptedException {
         //open file from res folder
         File file = new File("res/" + fileName);
@@ -49,7 +50,6 @@ class UDPServer {
         //final byte container for data
         byte[] packetBytes = new byte[PACKETLENGTH];
         //Array to keep hold of the pakcets we have sent
-        List<byte[]> sentPackets = new ArrayList<byte[]>();
 
         //create file input stream
         FileInputStream fileInputStream = new FileInputStream(file);
@@ -92,14 +92,14 @@ class UDPServer {
                 //send packet to the client
                 serverSocket.send(sendPacket);
                 //store the sent packet in the array in case of a nack
-                sentPackets.add(packetBytes);
+                sentNotVerifiedPackets.add(packetBytes);
                 //System.out.println("Sending this to client: " + new String(packetBytes));
                 System.out.println("Sending bytes from: " + transferredBytes + " to " + sendingBytes);
 
                 packetBytes = new byte[PACKETLENGTH];
                 transferredBytes += (PACKETLENGTH - responseHeader.length());
                 //this delay is to prevent problems. The buffer was being overwritten.
-                TimeUnit.MILLISECONDS.sleep(50);
+                TimeUnit.MILLISECONDS.sleep(10);
             }
 
             //resend any messed up packets
@@ -113,14 +113,14 @@ class UDPServer {
                     break;
                 } else {
                     System.out.println("Resending packet " + sequenceNumber);
-                    byte[] dataToResend = sentPackets.get(sequenceNumber);
+                    byte[] dataToResend = sentNotVerifiedPackets.get(sequenceNumber);
 
                     DatagramPacket sendPacket =
                             new DatagramPacket(dataToResend, dataToResend.length, receivePacket.getAddress(), receivePacket.getPort());
 
                     //send packet to the client
                     serverSocket.send(sendPacket);
-                    TimeUnit.MILLISECONDS.sleep(50);
+                    TimeUnit.MILLISECONDS.sleep(10);
                 }
             }
 
@@ -130,33 +130,60 @@ class UDPServer {
 
     }
 
-    public static void handleAcks(DatagramSocket serverSocket, Queue<Integer> queue) throws InterruptedException, IOException {
+    public static void handleAcks(DatagramSocket serverSocket, Queue<Integer> queue, List<byte[]> sentNotVerifiedPackets) throws InterruptedException, IOException {
+        //create a set of packets that have been received
+        Set<Integer> receivedPackets = new HashSet<Integer>();
+        //only let receive block for 50 ms
+        serverSocket.setSoTimeout(50);
         while(true){
+            //receive ack from client
             byte[] receiveData = new byte[1024];
             DatagramPacket receivePacket =
                     new DatagramPacket(receiveData, receiveData.length);
-            serverSocket.receive(receivePacket);
-            String response = new String(receivePacket.getData());
-            String packetStatus = response.split(" ")[0];
-//            System.out.println(response);
-            int sequenceNumber = Integer.parseInt(response.split(" ")[1].replace("\0",""));
-        System.out.println("sequence number: " + sequenceNumber);
-            if (sequenceNumber < 0) {
-                break;
-            }
-            if (packetStatus.equals("NACK")) {
-                queue.add(sequenceNumber);
-            }
+            try{
+                serverSocket.receive(receivePacket);
+                String response = new String(receivePacket.getData());
+                String packetStatus = response.split(" ")[0];
+                int sequenceNumber = Integer.parseInt(response.split(" ")[1].replace("\0",""));
+                //ending packet
+                if (sequenceNumber < 0) {
+                    break;
+                }
+                //handle nacks
+                if (packetStatus.equals("NACK")) {
+                    queue.add(sequenceNumber);
+                }
+                else {
+                    //add sequence number to set
+                    receivedPackets.add(sequenceNumber);
+                }
+             } catch (java.net.SocketTimeoutException error){
+                // resend any sequence numbers not in the set
+                 for(int i = 0; i < sentNotVerifiedPackets.size(); i++){
+                     if(!receivedPackets.contains(i)){
+                         queue.add(i);
+                     }
+                 }
+
+             }
+
         }
     }
 
-    public static void selectiveRepeat(String fileName, DatagramSocket serverSocket, DatagramPacket receivePacket, Queue<Integer> resendQueue) throws IOException, InterruptedException {
-        sendFile(fileName, serverSocket, receivePacket, resendQueue);
+    public static void selectiveRepeat(
+            String fileName,
+            DatagramSocket serverSocket,
+            DatagramPacket receivePacket,
+            Queue<Integer> resendQueue,
+            List<byte[]> sentNotVerifiedPackets
+        ) throws IOException, InterruptedException {
+        sendFile(fileName, serverSocket, receivePacket, resendQueue, sentNotVerifiedPackets);
     }
 
     public static void main(String args[]) throws Exception {
         Queue<Integer> resendQueue = new LinkedList<>();
         DatagramSocket serverSocket = new DatagramSocket(PORT);
+        List<byte[]> sentNotVerifiedPackets = new ArrayList<byte[]>();
         byte[] receiveData = new byte[1024];
 
         while(true) {
@@ -172,14 +199,14 @@ class UDPServer {
 
             Thread receiveThread = new Thread(()-> {
                 try {
-                    handleAcks(serverSocket, resendQueue);
+                    handleAcks(serverSocket, resendQueue, sentNotVerifiedPackets);
                 } catch (InterruptedException | IOException e) {
                     throw new RuntimeException(e);
                 }
             });
             receiveThread.start();
 
-            selectiveRepeat(fileName, serverSocket, receivePacket, resendQueue);
+            selectiveRepeat(fileName, serverSocket, receivePacket, resendQueue, sentNotVerifiedPackets);
 
             receiveThread.join();
 

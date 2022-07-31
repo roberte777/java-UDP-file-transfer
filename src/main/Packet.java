@@ -11,6 +11,7 @@ public class Packet {
     public boolean validPacket;
     public int fileReceived;
     private String[] packetArray;
+    public boolean packetLost;
 
     public Packet(byte[] packet){
         String stringPacket = new String(packet);
@@ -51,7 +52,7 @@ public class Packet {
         }
         return correctPacket;
     }
-    public void gremlin(double PROB) {
+    public void gremlin(double PROB, double LOSS_PROB) {
         //random number generator from 0 to 1
         double randomNumber = Math.random();
         if (randomNumber < PROB) {
@@ -73,6 +74,9 @@ public class Packet {
             System.out.println("Not gremlined packet");
         }
         this.checksum();
+        if (Math.random() < LOSS_PROB) {
+            this.packetLost = true;
+        }
     }
 
 }
